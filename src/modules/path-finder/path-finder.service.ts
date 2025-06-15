@@ -8,13 +8,15 @@ export class PathFinderService {
   constructor(private readonly bridgeAdapterService: BridgeAdapterService) {}
 
   async findBestPath(params: any) {
-    const adapter = this.bridgeAdapterService.AdaptersMap.get(AdaptersType.RELAY);
-    if (!adapter) {
+    const adapterRelay = this.bridgeAdapterService.AdaptersMap.get(AdaptersType.RELAY);
+    const adapterAcross = this.bridgeAdapterService.AdaptersMap.get(AdaptersType.ACROSS);
+
+    if (!adapterRelay || !adapterAcross) {
       throw new Error('Adapter not found');
     }
     const _params: QuoteParams = {
       // useReceiver: true,
-      walletAddress: '0x2cBBdc07de366d5964b47F0c178b5114781a6BE9',
+      senderAddress: '0x2cBBdc07de366d5964b47F0c178b5114781a6BE9',
       originChainId: 42161,
       destinationChainId: 10,
       originCurrency: '0xaf88d065e77c8cc2239327c5edb3a432268e5831',
@@ -22,7 +24,10 @@ export class PathFinderService {
       amount: '10000000',
       tradeType: 'EXACT_INPUT',
     };
-    const quote = await adapter.getQuote(_params);
-    console.log(quote);
+    const quoteRelay = await adapterRelay.getQuote(_params);
+    const quoteAcross = await adapterAcross.getQuote(_params);
+
+    console.log('relay: ', quoteRelay);
+    console.log('across: ', quoteAcross);
   }
 }

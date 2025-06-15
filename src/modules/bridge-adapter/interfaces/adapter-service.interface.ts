@@ -1,5 +1,6 @@
 export interface QuoteParams {
-  walletAddress?: string;
+  senderAddress?: string;
+  receiverAddress?: string;
   originChainId: number;
   destinationChainId: number;
   amount: string;
