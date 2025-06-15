@@ -30,7 +30,7 @@ export class AcrossService implements BaseAdapter {
           params: reqParams,
         }),
       );
-      console.log(data);
+
       const response: UnifiedQuoteResponse = {
         inputAmount: data.outputAmount,
         outputAmount: data.outputAmount,
@@ -50,10 +50,7 @@ export class AcrossService implements BaseAdapter {
       };
       return response;
     } catch (error) {
-      console.log(error.response);
       throw new BadRequestException('Bridge service error: ', error.response.data.message);
     }
-
-    return {} as UnifiedQuoteResponse;
   }
 }
