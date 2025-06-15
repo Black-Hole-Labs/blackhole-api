@@ -1,9 +1,11 @@
 export interface QuoteParams {
+  walletAddress?: string;
   originChainId: number;
   destinationChainId: number;
   amount: string;
   originCurrency: string;
   destinationCurrency: string;
+  tradeType: 'EXACT_INPUT' | 'EXACT_OUTPUT'; // TODO: check this
 }
 
 export interface QuoteFee {

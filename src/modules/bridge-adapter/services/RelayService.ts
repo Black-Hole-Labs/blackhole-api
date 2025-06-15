@@ -1,20 +1,23 @@
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { BaseAdapter, QuoteParams, UnifiedQuoteResponse } from '../interfaces/adapter-service.interface';
-import { BridgeError } from '../errors/errors';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 
+@Injectable()
 export class RelayService implements BaseAdapter {
-  relayUrl = 'https://api.relay.link/';
+  relayUrl = 'https://api.relay.link';
   constructor(private readonly httpService: HttpService) {}
 
   async getQuote(params: QuoteParams) {
     try {
+      const body = { ...params, useReceiver: true, user: params.walletAddress };
+      console.log(body);
       const { data } = await firstValueFrom(
         this.httpService.post(`${this.relayUrl}/quote`, {
-          body: params,
+          body,
         }),
       );
-      // return data;
+
       const response: UnifiedQuoteResponse = {
         inputAmount: data.inputAmount,
         outputAmount: data.outputAmount,
@@ -25,11 +28,10 @@ export class RelayService implements BaseAdapter {
       console.log(data);
       return response;
     } catch (error) {
-      throw new BridgeError(
-        error.response?.data?.message || 'Bridge service error',
-        error.response?.status?.toString(),
-        error.response?.data,
-      );
+      if (error.response?.status === 400) {
+        throw new BadRequestException(error.response.data.message || 'Invalid request');
+      }
+      throw new InternalServerErrorException('Bridge service error');
     }
   }
 }
