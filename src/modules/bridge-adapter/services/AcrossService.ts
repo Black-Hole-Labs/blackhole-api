@@ -1,7 +1,7 @@
-import { BaseAdapter } from '../interfaces/adapter-service.interface';
+import { BaseAdapter, QuoteParams, UnifiedQuoteResponse } from '../interfaces/adapter-service.interface';
 
 export class AcrossService implements BaseAdapter {
-  getQuote(params: any): Promise<any> {
-    return Promise.resolve(params);
+  async getQuote({ originChainId, destinationChainId, amount, originCurrency, destinationCurrency }: QuoteParams) {
+    return {} as UnifiedQuoteResponse;
   }
 }
