@@ -54,3 +54,42 @@ export class AcrossService implements BaseAdapter {
     }
   }
 }
+
+/* example of calldata encoding */
+
+// const PoolV3_ABI = [
+//   "function depositV3(address refundAddress,address recipient,address inputToken,address outputToken,uint256 inputAmount,uint256 outputAmount,uint256 destinationChainId,address exclusiveRelayer,uint32 quoteTimestamp,uint32 fillDeadline,uint32 exclusivityDeadline,bytes message)"
+// ];
+
+// const iface = new ethers.utils.Interface(PoolV3_ABI);
+
+// const args = [
+//   params.senderAddress,           // refundAddress
+//   params.receiverAddress,         // recipient
+//   data.inputToken.address,        // inputToken
+//   data.outputToken.address,       // outputToken
+//   ethers.BigNumber.from(params.amount),      // inputAmount
+//   ethers.BigNumber.from(data.outputAmount),  // outputAmount
+//   params.destinationChainId,      // destinationChainId
+//   data.exclusiveRelayer,          // exclusiveRelayer
+//   Number(data.timestamp),         / quoteTimestamp
+//   Number(data.fillDeadline),      // fillDeadline
+//   data.exclusivityDeadline,       // exclusivityDeadline
+//   "0x",                           // message (empty of no destination call)
+// ];
+
+// const calldata = iface.encodeFunctionData("depositV3", args);
+
+
+/* use CALLDATA to send tx (for user) */
+
+// const provider = new ethers.providers.JsonRpcProvider(YOUR_RPC_URL)
+// const signer = provider.getSigner()
+
+// const tx = await signer.sendTransaction({
+//   to: data.spokePoolAddress,
+//   data: calldata,
+//   value: ethers.BigNumber.from(
+//     params.isNative ? params.amount : "0"
+//   ),
+// });
