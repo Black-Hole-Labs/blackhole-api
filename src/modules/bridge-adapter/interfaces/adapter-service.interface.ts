@@ -1,3 +1,5 @@
+import { AdaptersType } from '../types/adapters.enum';
+
 export interface QuoteParams {
   senderAddress?: string;
   receiverAddress?: string;
@@ -27,7 +29,12 @@ export interface QuoteTokenInfo {
   chainId: number;
 }
 
+export interface MetaData {
+  adapter: AdaptersType;
+}
+
 export interface UnifiedQuoteResponse {
+  metaData: MetaData;
   inputAmount: string;
   outputAmount: string;
   rate?: string;

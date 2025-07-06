@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { BaseAdapter, QuoteParams, UnifiedQuoteResponse } from '../../interfaces/adapter-service.interface';
 import { firstValueFrom } from 'rxjs';
 import { AcrossRequest, AcrossResponse } from './types';
+import { AdaptersType } from '@modules/bridge-adapter/types/adapters.enum';
 
 export class AcrossService implements BaseAdapter {
   acrossUrl = 'https://across.to/api';
@@ -32,6 +33,9 @@ export class AcrossService implements BaseAdapter {
       );
 
       const response: UnifiedQuoteResponse = {
+        metaData: {
+          adapter: AdaptersType.ACROSS,
+        },
         inputAmount: data.outputAmount,
         outputAmount: data.outputAmount,
         fees: [],
@@ -79,7 +83,6 @@ export class AcrossService implements BaseAdapter {
 // ];
 
 // const calldata = iface.encodeFunctionData("depositV3", args);
-
 
 /* use CALLDATA to send tx (for user) */
 

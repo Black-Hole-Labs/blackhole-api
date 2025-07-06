@@ -3,6 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { BaseAdapter, QuoteParams, UnifiedQuoteResponse } from '../../interfaces/adapter-service.interface';
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { RelayQuoteResponse } from './types';
+import { AdaptersType } from '@modules/bridge-adapter/types/adapters.enum';
 
 @Injectable()
 export class RelayService implements BaseAdapter {
@@ -25,6 +26,9 @@ export class RelayService implements BaseAdapter {
       const { data } = await firstValueFrom(this.httpService.post<RelayQuoteResponse>(`${this.relayUrl}/quote`, body));
 
       const response: UnifiedQuoteResponse = {
+        metaData: {
+          adapter: AdaptersType.RELAY,
+        },
         inputAmount: data.details.currencyIn.amount,
         outputAmount: data.details.currencyOut.amount,
         fees: [],

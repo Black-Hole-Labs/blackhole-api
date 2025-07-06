@@ -7,11 +7,12 @@ import { AcrossService } from './services/across/AcrossService';
 
 @Injectable()
 export class BridgeAdapterService {
-  // mb it should be array, not map
   public AdaptersMap: Map<AdaptersType, BaseAdapter> = new Map();
+  public AdaptersArray: BaseAdapter[] = [];
 
   constructor(private readonly httpService: HttpService) {
     this.AdaptersMap.set(AdaptersType.ACROSS, new AcrossService(this.httpService));
     this.AdaptersMap.set(AdaptersType.RELAY, new RelayService(this.httpService));
+    this.AdaptersArray = [new AcrossService(this.httpService), new RelayService(this.httpService)];
   }
 }
