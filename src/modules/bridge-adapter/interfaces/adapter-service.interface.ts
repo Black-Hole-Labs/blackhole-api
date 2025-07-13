@@ -44,10 +44,18 @@ export interface UnifiedQuoteResponse {
   fees: QuoteFee[];
   inputToken: QuoteTokenInfo;
   outputToken: QuoteTokenInfo;
+  timestamp?: number;
+}
+
+export interface Calldata {
+  to: string;
+  value: string;
+  data: string;
 }
 
 export interface BaseAdapter {
-  getQuote(params: QuoteParams): Promise<UnifiedQuoteResponse>;
+  getQuote(params: QuoteParams): Promise<UnifiedQuoteResponse | null>;
+  generateCalldata(params: QuoteParams, quote?: UnifiedQuoteResponse): Promise<Calldata>;
 
   // need to add more methods here
 }
