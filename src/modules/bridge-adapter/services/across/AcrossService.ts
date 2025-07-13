@@ -4,12 +4,17 @@ import { BaseAdapter, QuoteParams, UnifiedQuoteResponse } from '../../interfaces
 import { firstValueFrom } from 'rxjs';
 import { AcrossRequest, AcrossResponse } from './types';
 import { AdaptersType } from '@modules/bridge-adapter/types/adapters.enum';
+import { CHAIN_IDS } from '@shared-contracts/chainIds';
+import { LiFiDiamond } from '@shared-contracts/deployments/base.staging.json';
+import { Utils } from 'src/utils/utils';
+import { AcrossFacetV3, AcrossFacetV3__factory, ILiFi } from '@shared-contracts/typechain';
+import { BigNumber, constants, utils } from 'ethers';
 
 export class AcrossService implements BaseAdapter {
   acrossUrl = 'https://across.to/api';
   constructor(private readonly httpService: HttpService) {}
 
-  async getQuote({
+  public async getQuote({
     originChainId,
     destinationChainId,
     amount,
@@ -18,9 +23,20 @@ export class AcrossService implements BaseAdapter {
     senderAddress,
     receiverAddress,
   }: QuoteParams) {
+    // across does not understand native token. Need to use WETH and etc
+    let _originCurrency = originCurrency;
+    let _destinationCurrency = destinationCurrency;
+
+    if (originCurrency === '0x0000000000000000000000000000000000000000') {
+      _originCurrency = this.nativeToWrappedToken(originChainId);
+    }
+    if (destinationCurrency === '0x0000000000000000000000000000000000000000') {
+      _destinationCurrency = this.nativeToWrappedToken(destinationChainId);
+    }
+
     try {
       const reqParams: AcrossRequest = {
-        token: originCurrency,
+        token: _originCurrency,
         destinationChainId,
         amount,
         originChainId,
@@ -51,48 +67,76 @@ export class AcrossService implements BaseAdapter {
           decimals: data.outputToken.decimals,
           chainId: data.outputToken.chainId,
         },
+        timestamp: Number(data.timestamp),
       };
       return response;
     } catch (error) {
       throw new BadRequestException('Bridge service error: ', error.response.data.message);
     }
   }
+
+  public async generateCalldata(params: QuoteParams, quote?: UnifiedQuoteResponse) {
+    if (!quote) {
+      throw new BadRequestException('[Across adapter]: Quote is required');
+    }
+
+    const liFiDiamondAddress = '0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE';
+    // const liFiDiamondAddress = LiFiDiamond;
+
+    const provider = Utils.getProvider(params.originChainId);
+    const acrossV3Facet = AcrossFacetV3__factory.connect(liFiDiamondAddress, provider);
+
+    const bridgeData: ILiFi.BridgeDataStruct = {
+      transactionId: utils.randomBytes(32),
+      bridge: 'acrossV3',
+      integrator: 'demoScript',
+      referrer: '0x0000000000000000000000000000000000000000',
+      sendingAssetId: params.originCurrency,
+      receiver: params.senderAddress,
+      minAmount: params.amount,
+      destinationChainId: params.destinationChainId,
+      hasSourceSwaps: false,
+      hasDestinationCall: false,
+    };
+
+    let payload = '0x';
+    const acrossV3Data: AcrossFacetV3.AcrossV3DataStruct = {
+      receivingAssetId: quote.outputToken.address,
+      outputAmount: quote.outputAmount,
+      outputAmountPercent: 0,
+      quoteTimestamp: quote.timestamp,
+      fillDeadline: quote.timestamp + 60 * 60, // 60 minutes from now
+      message: payload,
+      receiverAddress: params.receiverAddress,
+      refundAddress: params.receiverAddress,
+      exclusiveRelayer: constants.AddressZero,
+      exclusivityDeadline: 0,
+    };
+
+    console.log('acrossV3Data: ', acrossV3Data);
+    console.log('bridgeData: ', bridgeData);
+
+    // startBridgeTokensViaAcrossV3 юзается если не требуются свапы до бриджа.
+    const calldata = acrossV3Facet.interface.encodeFunctionData('startBridgeTokensViaAcrossV3', [
+      bridgeData,
+      acrossV3Data,
+    ]);
+    const value = params.originCurrency === constants.AddressZero ? params.amount : '0';
+    return {
+      to: liFiDiamondAddress,
+      value: value,
+      data: calldata,
+    };
+  }
+
+  private nativeToWrappedToken(chainId: CHAIN_IDS) {
+    switch (chainId) {
+      case CHAIN_IDS.BASE:
+        return '0x4200000000000000000000000000000000000006';
+      case CHAIN_IDS.ARBITRUM:
+        return '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1';
+      default:
+        return '';
+    }
+  }
 }
-
-/* example of calldata encoding */
-
-// const PoolV3_ABI = [
-//   "function depositV3(address refundAddress,address recipient,address inputToken,address outputToken,uint256 inputAmount,uint256 outputAmount,uint256 destinationChainId,address exclusiveRelayer,uint32 quoteTimestamp,uint32 fillDeadline,uint32 exclusivityDeadline,bytes message)"
-// ];
-
-// const iface = new ethers.utils.Interface(PoolV3_ABI);
-
-// const args = [
-//   params.senderAddress,           // refundAddress
-//   params.receiverAddress,         // recipient
-//   data.inputToken.address,        // inputToken
-//   data.outputToken.address,       // outputToken
-//   ethers.BigNumber.from(params.amount),      // inputAmount
-//   ethers.BigNumber.from(data.outputAmount),  // outputAmount
-//   params.destinationChainId,      // destinationChainId
-//   data.exclusiveRelayer,          // exclusiveRelayer
-//   Number(data.timestamp),         / quoteTimestamp
-//   Number(data.fillDeadline),      // fillDeadline
-//   data.exclusivityDeadline,       // exclusivityDeadline
-//   "0x",                           // message (empty of no destination call)
-// ];
-
-// const calldata = iface.encodeFunctionData("depositV3", args);
-
-/* use CALLDATA to send tx (for user) */
-
-// const provider = new ethers.providers.JsonRpcProvider(YOUR_RPC_URL)
-// const signer = provider.getSigner()
-
-// const tx = await signer.sendTransaction({
-//   to: data.spokePoolAddress,
-//   data: calldata,
-//   value: ethers.BigNumber.from(
-//     params.isNative ? params.amount : "0"
-//   ),
-// });

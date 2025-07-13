@@ -9,22 +9,29 @@ export class PathFinderService {
   async findBestPath(params: QuoteParams) {
     const adaptersArray = this.bridgeAdapterService.AdaptersArray;
 
-    const result = await Promise.all(
+    const results = await Promise.all(
       adaptersArray.map(async (adapter) => {
         return adapter.getQuote(params);
       }),
     );
 
-    console.log('result: ', result);
-    const bestRoute = result.sort((a, b) => +a.outputAmount - +b.outputAmount)[0];
-    console.log('sortedResult: ', bestRoute);
+    // Фильтруем null значения
+    const validResults = results.filter((result) => result !== null);
 
-    const calldata = '';
+    if (validResults.length === 0) {
+      throw new Error('No adapters available for this request');
+    }
+    console.log('validResults: ', validResults);
+    const bestRoute = validResults.sort((a, b) => +b.outputAmount - +a.outputAmount)[0];
+    // console.log('bestRoute: ', bestRoute);
+    const bestRouteAdapter = this.bridgeAdapterService.AdaptersMap.get(bestRoute.metaData.adapter);
+    const calldata = await bestRouteAdapter.generateCalldata(params, bestRoute);
 
-    return bestRoute;
-    // return {
-    //   quoteRelay,
-    //   quoteAcross,
-    // };
+    return {
+      inputAmount: bestRoute.inputAmount,
+      outputAmount: bestRoute.outputAmount,
+      adapter: bestRoute.metaData.adapter,
+      calldata,
+    };
   }
 }

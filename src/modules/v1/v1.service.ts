@@ -10,6 +10,6 @@ export class V1Service {
     const path = this.pathFinderService.findBestPath(quote);
     // and other magic logic here
 
-    return 'getQuote';
+    return path;
   }
 }
