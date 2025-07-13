@@ -92,8 +92,6 @@ export class RelayService implements BaseAdapter {
         this.httpService.get(`${this.relayUrl}/requests/${requestId}/signature/v2`),
       );
 
-      // Этап 3: Формирование каллдаты с encodeFunctionData
-
       const bridgeData = {
         transactionId: ethers.utils.randomBytes(32),
         bridge: 'Relay',
@@ -106,8 +104,6 @@ export class RelayService implements BaseAdapter {
         hasSourceSwaps: false,
         hasDestinationCall: false,
       };
-
-      // Формируем RelayData
 
       let _receivingAssetId = constants.HashZero;
       if (params.destinationCurrency !== '0x0000000000000000000000000000000000000000') {
@@ -135,81 +131,3 @@ export class RelayService implements BaseAdapter {
     }
   }
 }
-
-/**
- * 
- * const RPC_URL = process.env.ETH_NODE_URI_BASE
-  const PRIVATE_KEY = process.env.PRIVATE_KEY
-  const LIFI_ADDRESS = deployments.LiFiDiamond
-
-  const provider = new ethers.providers.JsonRpcProvider(RPC_URL)
-  const signer = new ethers.Wallet(PRIVATE_KEY as string, provider)
-  const relay = RelayFacet__factory.connect(LIFI_ADDRESS, provider)
-
-  const address = await signer.getAddress()
-  console.log('Address: ', address)
-  let tx
-
-  // Bridge ETH
-  const eth_bridge_amount = ethers.utils.parseEther('0.0001')
-
-  let params = {
-    user: deployments.LiFiDiamond,
-    originChainId: CHAIN_IDS.BASE,
-    destinationChainId: CHAIN_IDS.ARBITRUM,
-    originCurrency: '0x0000000000000000000000000000000000000000',
-    destinationCurrency: '0x0000000000000000000000000000000000000000',
-    recipient: address,
-    tradeType: 'EXACT_INPUT',
-    amount: eth_bridge_amount.toString(),
-    referrer: 'relay.link/swap',
-    useExternalLiquidity: false,
-  }
-
-  let resp = await fetch('https://api.relay.link/quote', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(params),
-  })
-  let quote = await resp.json()
-  let requestId = quote.steps[0].requestId
-
-  let sigResp = await fetch(
-    `https://api.relay.link/requests/${requestId}/signature/v2`,
-    { headers: { 'Content-Type': 'application/json' } }
-  )
-  let sigData = await sigResp.json()
-
-  let bridgeData: ILiFi.BridgeDataStruct = {
-    transactionId: utils.randomBytes(32),
-    bridge: 'Relay',
-    integrator: 'ACME Devs',
-    referrer: '0x0000000000000000000000000000000000000000',
-    sendingAssetId: '0x0000000000000000000000000000000000000000',
-    receiver: address,
-    minAmount: eth_bridge_amount,
-    destinationChainId: CHAIN_IDS.ARBITRUM,
-    hasSourceSwaps: false,
-    hasDestinationCall: false,
-  }
-
-  let relayData: RelayFacet.RelayDataStruct = {
-    requestId,
-    nonEVMReceiver: ethers.constants.HashZero,
-    receivingAssetId: ethers.constants.HashZero,
-    signature: sigData.signature,
-  }
-
-  console.info('Dev Wallet Address: ', address)
-  console.info('Bridging ETH...')
-  tx = await relay
-    .connect(signer)
-    .startBridgeTokensViaRelay(bridgeData, relayData, {
-      value: eth_bridge_amount,
-    })
-  await tx.wait()
-  console.info('Bridged ETH')
-
- */
