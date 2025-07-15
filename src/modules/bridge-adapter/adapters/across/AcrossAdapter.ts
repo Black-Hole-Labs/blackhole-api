@@ -10,7 +10,7 @@ import { Utils } from 'src/utils/utils';
 import { AcrossFacetV3, AcrossFacetV3__factory, ILiFi } from '@shared-contracts/typechain';
 import { BigNumber, constants, utils } from 'ethers';
 
-export class AcrossService implements BaseAdapter {
+export class AcrossAdapter implements BaseAdapter {
   acrossUrl = 'https://across.to/api';
   constructor(private readonly httpService: HttpService) {}
 
@@ -28,10 +28,10 @@ export class AcrossService implements BaseAdapter {
     let _destinationCurrency = destinationCurrency;
 
     if (originCurrency === '0x0000000000000000000000000000000000000000') {
-      _originCurrency = this.nativeToWrappedToken(originChainId);
+      _originCurrency = Utils.nativeToWrappedToken(originChainId);
     }
     if (destinationCurrency === '0x0000000000000000000000000000000000000000') {
-      _destinationCurrency = this.nativeToWrappedToken(destinationChainId);
+      _destinationCurrency = Utils.nativeToWrappedToken(destinationChainId);
     }
 
     try {
@@ -127,16 +127,5 @@ export class AcrossService implements BaseAdapter {
       value: value,
       data: calldata,
     };
-  }
-
-  private nativeToWrappedToken(chainId: CHAIN_IDS) {
-    switch (chainId) {
-      case CHAIN_IDS.BASE:
-        return '0x4200000000000000000000000000000000000006';
-      case CHAIN_IDS.ARBITRUM:
-        return '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1';
-      default:
-        return '';
-    }
   }
 }

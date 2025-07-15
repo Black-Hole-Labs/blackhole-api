@@ -10,4 +10,14 @@ export class Utils {
         return new ethers.providers.JsonRpcProvider(process.env.RPC_URL_ARBITRUM);
     }
   }
+  public static nativeToWrappedToken(chainId: CHAIN_IDS) {
+    switch (chainId) {
+      case CHAIN_IDS.BASE:
+        return '0x4200000000000000000000000000000000000006';
+      case CHAIN_IDS.ARBITRUM:
+        return '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1';
+      default:
+        return '';
+    }
+  }
 }
