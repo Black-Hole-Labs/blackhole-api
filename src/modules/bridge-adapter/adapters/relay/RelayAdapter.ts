@@ -11,7 +11,7 @@ import { CHAIN_IDS } from '@shared-contracts/chainIds';
 import { Utils } from 'src/utils/utils';
 
 @Injectable()
-export class RelayService implements BaseAdapter {
+export class RelayAdapter implements BaseAdapter {
   relayUrl = 'https://api.relay.link'; // TODO: move to env
 
   constructor(private readonly httpService: HttpService) {}
