@@ -3,11 +3,11 @@ import { IsString, IsNumber, IsOptional, IsEnum } from 'class-validator';
 export class QuoteRequestDto {
   @IsOptional()
   @IsString()
-  senderAddress?: string;
+  senderAddress: string;
 
   @IsOptional()
   @IsString()
-  receiverAddress?: string;
+  receiverAddress: string;
 
   @IsNumber()
   originChainId: number;

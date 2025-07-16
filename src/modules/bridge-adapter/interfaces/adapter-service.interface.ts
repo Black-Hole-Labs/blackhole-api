@@ -1,8 +1,8 @@
 import { AdaptersType } from '../types/adapters.enum';
 
 export interface QuoteParams {
-  senderAddress?: string;
-  receiverAddress?: string;
+  senderAddress: string;
+  receiverAddress: string;
   originChainId: number;
   destinationChainId: number;
   amount: string;

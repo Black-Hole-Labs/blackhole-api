@@ -9,6 +9,8 @@ import { constants, ethers, utils } from 'ethers';
 import { LiFiDiamond } from '@shared-contracts/deployments/base.staging.json';
 import { CHAIN_IDS } from '@shared-contracts/chainIds';
 import { Utils } from 'src/utils/utils';
+import { PublicKey } from '@solana/web3.js';
+import { NON_EVM_ADDRESS } from 'src/utils/constants';
 
 @Injectable()
 export class RelayAdapter implements BaseAdapter {
@@ -19,13 +21,13 @@ export class RelayAdapter implements BaseAdapter {
   async getQuote(params: QuoteParams) {
     try {
       const body = {
-        userReceiver: true,
         user: params.senderAddress,
         originChainId: params.originChainId,
         destinationChainId: params.destinationChainId,
         originCurrency: params.originCurrency,
         destinationCurrency: params.destinationCurrency,
         amount: params.amount,
+        recipient: params.receiverAddress,
         tradeType: params.tradeType,
       };
 
@@ -81,6 +83,8 @@ export class RelayAdapter implements BaseAdapter {
         referrer: 'relay.link/swap',
         useExternalLiquidity: false,
       };
+      const destTokenNative = params.destinationCurrency === '0x0000000000000000000000000000000000000000';
+      const destChainSolana = params.destinationChainId === 792703809;
 
       const { data: quoteData } = await firstValueFrom(
         this.httpService.post<RelayQuoteResponse>(`${this.relayUrl}/quote`, quoteBody),
@@ -100,7 +104,7 @@ export class RelayAdapter implements BaseAdapter {
         integrator: 'ACME Devs',
         referrer: '0x0000000000000000000000000000000000000000',
         sendingAssetId: params.originCurrency,
-        receiver: params.receiverAddress || params.senderAddress,
+        receiver: destChainSolana ? NON_EVM_ADDRESS : params.receiverAddress,
         minAmount: params.amount,
         destinationChainId: params.destinationChainId,
         hasSourceSwaps: false,
@@ -110,12 +114,19 @@ export class RelayAdapter implements BaseAdapter {
       // Формируем RelayData
 
       let _receivingAssetId = constants.HashZero;
-      if (params.destinationCurrency !== '0x0000000000000000000000000000000000000000') {
+
+      if (!destTokenNative && !destChainSolana) {
         _receivingAssetId = utils.hexZeroPad(params.destinationCurrency, 32);
       }
+      let _nonEVMReceiver = ethers.constants.HashZero;
+      if (destChainSolana) {
+        _receivingAssetId = `0x${new PublicKey(params.destinationCurrency).toBuffer().toString('hex')}`;
+        _nonEVMReceiver = `0x${new PublicKey(params.receiverAddress).toBuffer().toString('hex')}`;
+      }
+
       const relayData = {
         requestId,
-        nonEVMReceiver: ethers.constants.HashZero,
+        nonEVMReceiver: _nonEVMReceiver,
         receivingAssetId: _receivingAssetId,
         signature: signatureData.signature,
       };
@@ -128,6 +139,7 @@ export class RelayAdapter implements BaseAdapter {
         data: calldata,
       };
     } catch (error) {
+      console.log('Relay adapter failed:', error.message);
       if (error.response?.status === 400) {
         throw new BadRequestException(error.response.data.message || 'Invalid request');
       }

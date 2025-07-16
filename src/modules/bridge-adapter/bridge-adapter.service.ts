@@ -11,7 +11,7 @@ export class BridgeAdapterService {
   // public AdaptersArray: BaseAdapter[] = [];
 
   constructor(private readonly httpService: HttpService) {
-    this.AdaptersMap.set(AdaptersType.ACROSS, new AcrossAdapter(this.httpService));
+    // this.AdaptersMap.set(AdaptersType.ACROSS, new AcrossAdapter(this.httpService));
     this.AdaptersMap.set(AdaptersType.RELAY, new RelayAdapter(this.httpService));
   }
 
