@@ -5,9 +5,9 @@ import { BadRequestException, Injectable, InternalServerErrorException } from '@
 import { RelayQuoteResponse } from './types';
 import { AdaptersType } from '@modules/bridge-adapter/types/adapters.enum';
 import { RelayFacet__factory } from '@shared-contracts/typechain/factories/RelayFacet__factory';
-import { constants, ethers, utils } from 'ethers';
-import { LiFiDiamond } from '@shared-contracts/deployments/base.staging.json';
-import { CHAIN_IDS } from '@shared-contracts/chainIds';
+import { BigNumber, constants, ethers, utils } from 'ethers';
+// import { LiFiDiamond } from '@shared-contracts/deployments/base.staging.json';
+// import { CHAIN_IDS } from '@shared-contracts/chainIds';
 import { Utils } from 'src/utils/utils';
 import { PublicKey } from '@solana/web3.js';
 import { NON_EVM_ADDRESS } from 'src/utils/constants';
@@ -21,6 +21,7 @@ export class RelayAdapter implements BaseAdapter {
   async getQuote(params: QuoteParams) {
     try {
       const body = {
+        // userReceiver: true,
         user: params.senderAddress,
         originChainId: params.originChainId,
         destinationChainId: params.destinationChainId,

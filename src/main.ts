@@ -18,7 +18,7 @@ async function bootstrap() {
   app.useGlobalFilters();
   app.enableShutdownHooks();
 
-  const devOrigin = ['http://localhost:5173', 'http://localhost:3000'];
+  const devOrigin = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4200'];
   app.enableCors({
     origin: [...devOrigin],
     // origin: true,

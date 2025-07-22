@@ -49,7 +49,7 @@ export interface UnifiedQuoteResponse {
 
 export interface Calldata {
   to: string;
-  value: string;
+  value: string; // cast to hex in path-finder
   data: string;
 }
 
