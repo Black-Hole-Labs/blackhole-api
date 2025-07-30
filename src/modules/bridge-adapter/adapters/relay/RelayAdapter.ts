@@ -9,7 +9,7 @@ import { BigNumber, constants, ethers, utils } from 'ethers';
 // import { LiFiDiamond } from '@shared-contracts/deployments/base.staging.json';
 // import { CHAIN_IDS } from '@shared-contracts/chainIds';
 import { Utils } from 'src/utils/utils';
-import { PublicKey } from '@solana/web3.js';
+import { AddressLookupTableAccount, Connection, PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import { NON_EVM_ADDRESS } from 'src/utils/constants';
 
 @Injectable()
@@ -53,6 +53,7 @@ export class RelayAdapter implements BaseAdapter {
           decimals: data.details.currencyOut.currency.decimals,
           chainId: data.details.currencyOut.currency.chainId,
         },
+        raw: data,
       };
 
       return response;
@@ -64,81 +65,128 @@ export class RelayAdapter implements BaseAdapter {
     }
   }
 
-  async generateCalldata(params: QuoteParams) {
+  async generateCalldata(params: QuoteParams, quote?: UnifiedQuoteResponse) {
     try {
-      const provider = Utils.getProvider(params.originChainId);
+      if (params.originChainId === 792703809) 
+        { // from Solana
+        if (!quote) {
+          throw new BadRequestException('[Across adapter]: Quote is required');
+        }
 
-      const liFiDiamond = '0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE';
-      // const liFiDiamond = LiFiDiamond;
-      const relayFacet = RelayFacet__factory.connect(liFiDiamond, provider);
+        const item = quote.raw.steps[0].items[0].data;
+        const instructionsData = item.instructions;
+        const connection = new Connection("https://api.mainnet-beta.solana.com");
+        const payer = new PublicKey(params.senderAddress);
 
-      const quoteBody = {
-        user: liFiDiamond,
-        recipient: params.receiverAddress,
-        originChainId: params.originChainId,
-        destinationChainId: params.destinationChainId,
-        originCurrency: params.originCurrency,
-        destinationCurrency: params.destinationCurrency,
-        amount: params.amount,
-        tradeType: params.tradeType,
-        referrer: 'relay.link/swap',
-        useExternalLiquidity: false,
-      };
-      const destTokenNative = params.destinationCurrency === '0x0000000000000000000000000000000000000000';
-      const destChainSolana = params.destinationChainId === 792703809;
+        const { blockhash, lastValidBlockHeight } =
+          await connection.getLatestBlockhash("finalized");
 
-      const { data: quoteData } = await firstValueFrom(
-        this.httpService.post<RelayQuoteResponse>(`${this.relayUrl}/quote`, quoteBody),
-      );
+        const insts = instructionsData.map(inst =>
+          new TransactionInstruction({
+            programId: new PublicKey(inst.programId),
+            keys: inst.keys.map(k => ({
+              pubkey: new PublicKey(k.pubkey),
+              isSigner: k.isSigner,
+              isWritable: k.isWritable,
+            })),
+            data: Buffer.from(inst.data, "hex"),
+          }))
+        
+        const lookupTableAddresses = item.addressLookupTableAddresses || [];
+        const lookupAccounts: AddressLookupTableAccount[] = [];
+        for (const addr of lookupTableAddresses) {
+          const res = await connection.getAddressLookupTable(new PublicKey(addr));
+          if (res.value) {
+            lookupAccounts.push(res.value);
+          }
+        }
+        const messageV0 = new TransactionMessage({
+          payerKey: payer,
+          recentBlockhash: blockhash,
+          instructions: insts,
+        }).compileToV0Message(lookupAccounts);
+        const tx = new VersionedTransaction(messageV0);
 
-      const requestId = quoteData.steps[0].requestId;
+        const bufferSerialized = Buffer.from(tx.serialize()).toString("base64");
 
-      const { data: signatureData } = await firstValueFrom(
-        this.httpService.get(`${this.relayUrl}/requests/${requestId}/signature/v2`),
-      );
-
-      // Этап 3: Формирование каллдаты с encodeFunctionData
-
-      const bridgeData = {
-        transactionId: ethers.utils.randomBytes(32),
-        bridge: 'Relay',
-        integrator: 'ACME Devs',
-        referrer: '0x0000000000000000000000000000000000000000',
-        sendingAssetId: params.originCurrency,
-        receiver: destChainSolana ? NON_EVM_ADDRESS : params.receiverAddress,
-        minAmount: params.amount,
-        destinationChainId: params.destinationChainId,
-        hasSourceSwaps: false,
-        hasDestinationCall: false,
-      };
-
-      // Формируем RelayData
-
-      let _receivingAssetId = constants.HashZero;
-
-      if (!destTokenNative && !destChainSolana) {
-        _receivingAssetId = utils.hexZeroPad(params.destinationCurrency, 32);
+        return { to: "SOL", data: bufferSerialized, value: "0" };
       }
-      let _nonEVMReceiver = ethers.constants.HashZero;
-      if (destChainSolana) {
-        _receivingAssetId = `0x${new PublicKey(params.destinationCurrency).toBuffer().toString('hex')}`;
-        _nonEVMReceiver = `0x${new PublicKey(params.receiverAddress).toBuffer().toString('hex')}`;
+      else
+      { // from EVM
+        const provider = Utils.getProvider(params.originChainId);
+
+        const liFiDiamond = '0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE';
+        // const liFiDiamond = LiFiDiamond;
+        const relayFacet = RelayFacet__factory.connect(liFiDiamond, provider);
+
+        const quoteBody = {
+          user: liFiDiamond,
+          recipient: params.receiverAddress,
+          originChainId: params.originChainId,
+          destinationChainId: params.destinationChainId,
+          originCurrency: params.originCurrency,
+          destinationCurrency: params.destinationCurrency,
+          amount: params.amount,
+          tradeType: params.tradeType,
+          referrer: 'relay.link/swap',
+          useExternalLiquidity: false,
+        };
+        const destTokenNative = params.destinationCurrency === '0x0000000000000000000000000000000000000000';
+        const destChainSolana = params.destinationChainId === 792703809;
+
+        const { data: quoteData } = await firstValueFrom(
+          this.httpService.post<RelayQuoteResponse>(`${this.relayUrl}/quote`, quoteBody),
+        );
+
+        const requestId = quoteData.steps[0].requestId;
+
+        const { data: signatureData } = await firstValueFrom(
+          this.httpService.get(`${this.relayUrl}/requests/${requestId}/signature/v2`),
+        );
+
+        // Этап 3: Формирование каллдаты с encodeFunctionData
+
+        const bridgeData = {
+          transactionId: ethers.utils.randomBytes(32),
+          bridge: 'Relay',
+          integrator: 'ACME Devs',
+          referrer: '0x0000000000000000000000000000000000000000',
+          sendingAssetId: params.originCurrency,
+          receiver: destChainSolana ? NON_EVM_ADDRESS : params.receiverAddress,
+          minAmount: params.amount,
+          destinationChainId: params.destinationChainId,
+          hasSourceSwaps: false,
+          hasDestinationCall: false,
+        };
+
+        // Формируем RelayData
+
+        let _receivingAssetId = constants.HashZero;
+
+        if (!destTokenNative && !destChainSolana) {
+          _receivingAssetId = utils.hexZeroPad(params.destinationCurrency, 32);
+        }
+        let _nonEVMReceiver = ethers.constants.HashZero;
+        if (destChainSolana) {
+          _receivingAssetId = `0x${new PublicKey(params.destinationCurrency).toBuffer().toString('hex')}`;
+          _nonEVMReceiver = `0x${new PublicKey(params.receiverAddress).toBuffer().toString('hex')}`;
+        }
+
+        const relayData = {
+          requestId,
+          nonEVMReceiver: _nonEVMReceiver,
+          receivingAssetId: _receivingAssetId,
+          signature: signatureData.signature,
+        };
+
+        const calldata = relayFacet.interface.encodeFunctionData('startBridgeTokensViaRelay', [bridgeData, relayData]);
+
+        return {
+          to: liFiDiamond,
+          value: params.originCurrency === '0x0000000000000000000000000000000000000000' ? params.amount : '0',
+          data: calldata,
+        };
       }
-
-      const relayData = {
-        requestId,
-        nonEVMReceiver: _nonEVMReceiver,
-        receivingAssetId: _receivingAssetId,
-        signature: signatureData.signature,
-      };
-
-      const calldata = relayFacet.interface.encodeFunctionData('startBridgeTokensViaRelay', [bridgeData, relayData]);
-
-      return {
-        to: liFiDiamond,
-        value: params.originCurrency === '0x0000000000000000000000000000000000000000' ? params.amount : '0',
-        data: calldata,
-      };
     } catch (error) {
       console.log('Relay adapter failed:', error.message);
       if (error.response?.status === 400) {

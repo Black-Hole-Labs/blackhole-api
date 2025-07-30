@@ -45,6 +45,8 @@ export interface UnifiedQuoteResponse {
   inputToken: QuoteTokenInfo;
   outputToken: QuoteTokenInfo;
   timestamp?: number;
+
+  raw?: any; // for Solana to get instructions
 }
 
 export interface Calldata {
