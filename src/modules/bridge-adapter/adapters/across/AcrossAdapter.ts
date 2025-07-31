@@ -71,7 +71,10 @@ export class AcrossAdapter implements BaseAdapter {
       };
       return response;
     } catch (error) {
-      throw new BadRequestException('Bridge service error: ', error.response.data.message);
+      console.log('Across adapter failed:', error.message);
+      console.log('error: ', error.response.data);
+
+      return null;
     }
   }
 

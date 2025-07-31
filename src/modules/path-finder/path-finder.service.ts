@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { BigNumber } from 'ethers';
 import { BridgeAdapterService } from '../bridge-adapter/bridge-adapter.service';
 import { QuoteParams } from '../bridge-adapter/interfaces/adapter-service.interface';
 
@@ -25,6 +26,8 @@ export class PathFinderService {
     // console.log('bestRoute: ', bestRoute);
     const bestRouteAdapter = this.bridgeAdapterService.AdaptersMap.get(bestRoute.metaData.adapter);
     const calldata = await bestRouteAdapter.generateCalldata(params, bestRoute);
+
+    calldata.value = BigNumber.from(calldata.value).toHexString();
 
     return {
       inputAmount: bestRoute.inputAmount,

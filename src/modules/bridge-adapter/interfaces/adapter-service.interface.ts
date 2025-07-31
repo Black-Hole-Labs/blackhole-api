@@ -1,8 +1,8 @@
 import { AdaptersType } from '../types/adapters.enum';
 
 export interface QuoteParams {
-  senderAddress?: string;
-  receiverAddress?: string;
+  senderAddress: string;
+  receiverAddress: string;
   originChainId: number;
   destinationChainId: number;
   amount: string;
@@ -45,11 +45,13 @@ export interface UnifiedQuoteResponse {
   inputToken: QuoteTokenInfo;
   outputToken: QuoteTokenInfo;
   timestamp?: number;
+
+  raw?: any; // for Solana to get instructions
 }
 
 export interface Calldata {
   to: string;
-  value: string;
+  value: string; // cast to hex in path-finder
   data: string;
 }
 
